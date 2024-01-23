@@ -42,7 +42,7 @@ def search_word(file_path, search_word):
                 break  # If found in any column, add the row and move to the next
     return found_rows
 
-def quiz(file_path, category_filter=None, last=None, mode=None):
+def quiz(file_path, category_filter=None, last=None, english_mode=False):
     data = load_csv(file_path)
     if last:
         data = data[-int(last):]  # Consider only the last 'xx' rows
@@ -71,21 +71,21 @@ def quiz(file_path, category_filter=None, last=None, mode=None):
             definition1 = random_entry['Definition1']
             definition2 = random_entry['Definition2']
 
-            if mode == 'bis':
+            if english_mode:
                 print(f"Definition: {definition1}, {definition2}")
                 user_word = input("Enter the word (Ctrl+C to exit): ")
             else:
                 print(f"Word: {word}")
                 user_definition = input("Enter the definition (Ctrl+C to exit): ")
 
-            if (mode == 'bis' and user_word.lower() == word.lower()) or \
-            (mode != 'bis' and (user_definition.lower() == definition1.lower() or user_definition.lower() == definition2.lower())):
+            if (english_mode and user_word.lower() == word.lower()) or \
+            (not english_mode and (user_definition.lower() == definition1.lower() or user_definition.lower() == definition2.lower())):
                 correct_count += 1
                 print("Correct!")
                 if word in incorrect_words:
                     incorrect_words.remove(word)
             else:
-                if mode == 'bis':
+                if english_mode:
                     print("Incorrect!")
                     print(f"Correct word: {word}")
                 else:
@@ -169,9 +169,9 @@ def main():
     parser.add_argument('--add', help='Add a new row to the CSV file', action='store_true')
     parser.add_argument('--search', help='Search for a word in the CSV file', type=str)
     parser.add_argument('--quiz', help='Take a quiz with a random word and prompt for definition', action='store_true')
-    parser.add_argument('--quiz_bis', help='Take a quiz with definitions and prompt for the corresponding word', action='store_true')
     parser.add_argument('--category', help='Filter words by category', type=str)
     parser.add_argument('--last', help='Take the last number of rows for the quiz', type=int)
+    parser.add_argument('--english', help='Take a quiz with definitions in English and prompt for the corresponding word', action='store_true')
     parser.add_argument('--quizall', help='Take a quiz with all words and store correctly defined words in QuizAllCorrect.csv', action='store_true')
     parser.add_argument('--quizall_reset', help='Reset QuizAllCorrect.csv', action='store_true')
     args = parser.parse_args()
@@ -186,9 +186,7 @@ def main():
         else:
             print("No matching rows found.")
     elif args.quiz:
-        quiz(default_file_path, args.category, args.last, mode='normal')
-    elif args.quiz_bis:
-        quiz(default_file_path, args.category, args.last, mode='bis')
+        quiz(default_file_path, args.category, args.last, args.english)
     elif args.quizall:
         quiz_all(default_file_path)
     elif args.quizall_reset:
