@@ -113,7 +113,7 @@ def count_remaining_words(data, quiz_all_correct):
     remaining_words = [entry for entry in data if entry['Word'] not in asked_words]
     return len(remaining_words)
 
-def quiz_all(file_path, reset=False):
+def quiz_all(file_path, english_mode=False, reset=False):
     if reset:
         with open("QuizAllCorrect.csv", "w"):
             pass
@@ -121,8 +121,7 @@ def quiz_all(file_path, reset=False):
     quiz_all_correct = load_csv("QuizAllCorrect.csv")
     data = load_csv(file_path)
     asked_words = [entry['Word'] for entry in quiz_all_correct]
-    correct_count = 0 # initialize - this variable stores correct answers per loop
-
+    correct_count = 0  # initialize - this variable stores correct answers per loop
 
     try:
         while True:
@@ -140,17 +139,26 @@ def quiz_all(file_path, reset=False):
             definition1 = random_entry['Definition1']
             definition2 = random_entry['Definition2']
 
-            print(f"Word: {word}")
-            user_definition = input("Enter the definition (Ctrl+C to exit): ")
+            if english_mode:
+                print(f"Definition: {definition1}, {definition2}")
+                user_word = input("Enter the word (Ctrl+C to exit): ")
+            else:
+                print(f"Word: {word}")
+                user_definition = input("Enter the definition (Ctrl+C to exit): ")
 
-            if user_definition.lower() == definition1.lower() or user_definition.lower() == definition2.lower():
+            if (english_mode and user_word.lower() == word.lower()) or \
+                    (not english_mode and (
+                            user_definition.lower() == definition1.lower() or user_definition.lower() == definition2.lower())):
                 correct_count += 1
                 print("Correct!")
                 quiz_all_correct.append(random_entry)
                 save_csv("QuizAllCorrect.csv", quiz_all_correct)
             else:
                 print("Incorrect!")
-                print(f"Correct definitions: {definition1}, {definition2}")
+                if english_mode:
+                    print(f"Correct word: {word}")
+                else:
+                    print(f"Correct definitions: {definition1}, {definition2}")
 
             asked_words.append(word)
 
@@ -188,7 +196,7 @@ def main():
     elif args.quiz:
         quiz(default_file_path, args.category, args.last, args.english)
     elif args.quizall:
-        quiz_all(default_file_path)
+        quiz_all(default_file_path, args.english)
     elif args.quizall_reset:
         quiz_all("BisayaLog.csv", reset=True)
     else:
