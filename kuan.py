@@ -138,29 +138,46 @@ def quiz_all(file_path, english_mode=False, reset=False):
             word = random_entry['Word']
             definition1 = random_entry['Definition1']
             definition2 = random_entry['Definition2']
+            synonym = random_entry['Synonym']  # New: Check for synonym
 
             if english_mode:
-                print(f"Definition: {definition1}, {definition2}")
-                user_word = input("Enter the word (Ctrl+C to exit): ")
+                if synonym:
+                    print(f"Definition: {definition1, definition2}")  # print column 1 in --english mode
+                    user_word = input("This is correct, but what is another word for this? (Ctrl+C to exit): ")
+                else:
+                    print(f"Definition: {definition1, definition2}")
+                    user_word = input("Enter the word (Ctrl+C to exit): ")
             else:
                 print(f"Word: {word}")
                 user_definition = input("Enter the definition (Ctrl+C to exit): ")
 
-            if (english_mode and user_word.lower() == word.lower()) or \
-                    (not english_mode and (
-                            user_definition.lower() == definition1.lower() or user_definition.lower() == definition2.lower())):
-                correct_count += 1
-                print("Correct!")
-                quiz_all_correct.append(random_entry)
-                save_csv("QuizAllCorrect.csv", quiz_all_correct)
-            else:
-                print("Incorrect!")
-                if english_mode:
-                    print(f"Correct word: {word}")
+            while True:
+                if (english_mode and ((synonym and user_word.lower() == synonym.lower()) or
+                                      (not synonym and user_word.lower() == word.lower()))) or \
+                        (not english_mode and (
+                                user_definition.lower() == definition1.lower() or user_definition.lower() == definition2.lower())):
+                    correct_count += 1
+                    print("Correct!")
+                    quiz_all_correct.append(random_entry)
+                    save_csv("QuizAllCorrect.csv", quiz_all_correct)
+                    asked_words.append(word)
+                    break
+                elif not english_mode and synonym:
+                    synonyms = [s.strip() for s in synonym.split(',')]
+                    if user_definition.lower() in [d.lower() for d in synonyms]:
+                        print("Correct, but I am looking for a different word.")
+                        user_definition = input("Try again (Ctrl+C to exit): ")
+                    else:
+                        print("Incorrect!")
+                        print(f"Correct definitions: {definition1}, {definition2}")
+                        break
                 else:
-                    print(f"Correct definitions: {definition1}, {definition2}")
-
-            asked_words.append(word)
+                    print("Incorrect!")
+                    if english_mode:
+                        print(f"Correct definition: {word}")  # print column 1 in --english mode
+                    else:
+                        print(f"Correct definitions: {definition1}, {definition2}")
+                    break
 
     except KeyboardInterrupt:
         remaining_count = count_remaining_words(data, quiz_all_correct)
