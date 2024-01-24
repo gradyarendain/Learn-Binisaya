@@ -163,7 +163,7 @@ def quiz_all(file_path, reset=False):
         print(f"Total rows in QuizAllCorrect.csv: {total_quiz_correct}")
 
 def main():
-    default_file_path = os.path.expanduser('~/bisaya/BisayaLog.csv')
+    default_file_path = os.path.expanduser('BisayaLog.csv')
 
     parser = argparse.ArgumentParser(description='Process CSV file')
     parser.add_argument('--add', help='Add a new row to the CSV file', action='store_true')
