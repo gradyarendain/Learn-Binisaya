@@ -153,7 +153,7 @@ def quiz_all(file_path, english_mode=False, reset=False):
 
             while True:
                 if (english_mode and ((synonym and user_word.lower() == synonym.lower()) or
-                                      (not synonym and user_word.lower() == word.lower()))) or \
+                                    (not synonym and user_word.lower() == word.lower()))) or \
                         (not english_mode and (
                                 user_definition.lower() == definition1.lower() or user_definition.lower() == definition2.lower())):
                     correct_count += 1
@@ -192,12 +192,14 @@ def sift_csv(file_path):
     modified_data = []
 
     try:
+        random.shuffle(data)  # Shuffle the data randomly
+
         for row in data:
             modified_row = row.copy()
             empty_fields = []
 
             for key, value in row.items():
-                if not value:
+                if value == "":
                     empty_fields.append(key)
 
             if empty_fields:
@@ -208,12 +210,24 @@ def sift_csv(file_path):
                 for key in empty_fields:
                     modified_row[key] = input(f"{key} (enter to keep current value): ") or row[key]
 
-            modified_data.append(modified_row)
+                modified_data.append(modified_row)
+
+                # Print count of remaining rows with empty cells using the modified data
+                remaining_rows_with_empty_cells = sum(1 for row in modified_data if any(cell == "" for cell in row.values()))
+                print(f"Rows remaining with empty cells: {remaining_rows_with_empty_cells}")
 
     except KeyboardInterrupt:
         print("\nSifting process interrupted. Saving the current progress.")
 
-    save_csv(file_path, modified_data)
+    # Combine the existing data with the modified data
+    for modified_row in modified_data:
+        existing_row = next((row for row in data if row['Word'] == modified_row['Word']), None)
+        if existing_row:
+            existing_row.update(modified_row)
+        else:
+            data.append(modified_row)
+
+    save_csv(file_path, data)
     print("Sifting complete.")
 
 def main():
