@@ -187,6 +187,35 @@ def quiz_all(file_path, english_mode=False, reset=False):
         print(f"Total rows in BisayaLog.csv: {total_bisaya_log}")
         print(f"Total rows in QuizAllCorrect.csv: {total_quiz_correct}")
 
+def sift_csv(file_path):
+    data = load_csv(file_path)
+    modified_data = []
+
+    try:
+        for row in data:
+            modified_row = row.copy()
+            empty_fields = []
+
+            for key, value in row.items():
+                if not value:
+                    empty_fields.append(key)
+
+            if empty_fields:
+                print(f"\nRow with Word '{row['Word']}':")
+                for key, value in row.items():
+                    print(f"{key}: {value}")
+
+                for key in empty_fields:
+                    modified_row[key] = input(f"{key} (enter to keep current value): ") or row[key]
+
+            modified_data.append(modified_row)
+
+    except KeyboardInterrupt:
+        print("\nSifting process interrupted. Saving the current progress.")
+
+    save_csv(file_path, modified_data)
+    print("Sifting complete.")
+
 def main():
     default_file_path = os.path.expanduser('BisayaLog.csv')
 
@@ -199,6 +228,7 @@ def main():
     parser.add_argument('--english', help='Take a quiz with definitions in English and prompt for the corresponding word', action='store_true')
     parser.add_argument('--quizall', help='Take a quiz with all words and store correctly defined words in QuizAllCorrect.csv', action='store_true')
     parser.add_argument('--quizall_reset', help='Reset QuizAllCorrect.csv', action='store_true')
+    parser.add_argument('--sift', help='Sift through BisayaLog.csv and input missing values', action='store_true')
     args = parser.parse_args()
 
     if args.add:
@@ -216,6 +246,8 @@ def main():
         quiz_all(default_file_path, args.english)
     elif args.quizall_reset:
         quiz_all("BisayaLog.csv", reset=True)
+    elif args.sift:
+        sift_csv(default_file_path)
     else:
         print("No action specified. Use '--add' to add a new row or '--search' to search for a word.")
 
