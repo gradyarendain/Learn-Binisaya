@@ -5,9 +5,7 @@ import random
 
 def load_csv(file_path):
     with open(file_path, 'r') as file:
-        reader = csv.DictReader(file)
-        data = list(reader)
-    return data
+        return list(csv.DictReader(file))
 
 def save_csv(file_path, data):
     fieldnames = ['Word', 'Type', 'Definition1', 'Definition2', 'Example', 'Synonym']
@@ -18,58 +16,33 @@ def save_csv(file_path, data):
 
 def add_row_interactive(file_path):
     data = load_csv(file_path)
-
-    new_row = {}
-    new_row['Word'] = input("Word: ")
-    new_row['Type'] = input("Type: ")
-    new_row['Definition1'] = input("Definition1: ")
-    new_row['Definition2'] = input("Definition2: ")
-    new_row['Example'] = input("Example: ")
-    new_row['Synonym'] = input("Synonym: ")
-
+    new_row = {key: input(f"{key}: ") for key in data[0].keys()}
     data.append(new_row)
     save_csv(file_path, data)
     print("Row added successfully.")
 
-
 def search_word(file_path, search_word):
     data = load_csv(file_path)
-    found_rows = []
-    for row in data:
-        for value in row.values():
-            if search_word.lower() == value.lower():
-                found_rows.append(row)
-                break  # If found in any column, add the row and move to the next
-    return found_rows
+    return [row for row in data if search_word.lower() in row.values()]
 
 def quiz(file_path, category_filter=None, last=None, english_mode=False):
-    data = load_csv(file_path)
-    if last:
-        data = data[-int(last):]  # Consider only the last 'xx' rows
-    correct_count = 0
-    total_quizzes = 0
-    asked_words = []
-    incorrect_words = []
+    data = load_csv(file_path)[-int(last):] if last else load_csv(file_path)
+    correct_count, total_quizzes, asked_words, incorrect_words = 0, 0, [], []
 
     try:
         while True:
             remaining_words = [entry for entry in data if entry['Word'] not in asked_words]
-
             if category_filter:
                 remaining_words = [entry for entry in remaining_words if entry['Type'].lower() == category_filter.lower()]
 
             if not remaining_words:
-                if incorrect_words:  # Check if there are incorrect words
-                    print("Repeating incorrectly answered words.")
-                    remaining_words = [entry for entry in data if entry['Word'] in incorrect_words]
-                else:
-                    print("You've been quizzed on all available words!")
+                remaining_words = [entry for entry in data if entry['Word'] in incorrect_words] if incorrect_words else []
+                print("Repeating incorrectly answered words." if incorrect_words else "You've been quizzed on all available words!")
+                if not remaining_words:
                     break
 
             random_entry = random.choice(remaining_words)
-            word = random_entry['Word']
-            definition1 = random_entry['Definition1']
-            definition2 = random_entry['Definition2']
+            word, definition1, definition2 = random_entry['Word'], random_entry['Definition1'], random_entry['Definition2']
 
             if english_mode:
                 print(f"Definition: {definition1}, {definition2}")
@@ -78,22 +51,16 @@ def quiz(file_path, category_filter=None, last=None, english_mode=False):
                 print(f"Word: {word}")
                 user_definition = input("Enter the definition (Ctrl+C to exit): ")
 
-            if (english_mode and user_word.lower() == word.lower()) or \
-            (not english_mode and (user_definition.lower() == definition1.lower() or user_definition.lower() == definition2.lower())):
+            if (english_mode and user_word.strip().lower() == word.strip().lower()) or \
+                (not english_mode and (user_definition.strip().lower() == definition1.strip().lower() or user_definition.strip().lower() == definition2.strip().lower())):
+
                 correct_count += 1
                 print("Correct!")
-                if word in incorrect_words:
-                    incorrect_words.remove(word)
+                incorrect_words.remove(word) if word in incorrect_words else None
             else:
-                if english_mode:
-                    print("Incorrect!")
-                    print(f"Correct word: {word}")
-                else:
-                    print("Incorrect!")
-                    print(f"Correct definitions: {definition1}, {definition2}")
-
-                if word not in incorrect_words:
-                    incorrect_words.append(word)
+                print("Incorrect!")
+                print(f"Correct word: {word}" if english_mode else f"Correct definitions: {definition1}, {definition2}")
+                incorrect_words.append(word) if word not in incorrect_words else None
 
             total_quizzes += 1
             asked_words.append(word)
@@ -103,123 +70,113 @@ def quiz(file_path, category_filter=None, last=None, english_mode=False):
 
     print(f"Total words quizzed: {total_quizzes}")
     print(f"Correctly defined: {correct_count}")
-    if total_quizzes > 0:
-        accuracy = (correct_count / total_quizzes) * 100
-        print(f"Accuracy: {accuracy:.2f}%")
-
+    print(f"Accuracy: {correct_count / total_quizzes * 100:.2f}%" if total_quizzes > 0 else "No quizzes taken.")
 
 def count_remaining_words(data, quiz_all_correct):
-    asked_words = [entry['Word'] for entry in quiz_all_correct]
-    remaining_words = [entry for entry in data if entry['Word'] not in asked_words]
-    return len(remaining_words)
+    asked_words = {entry['Word'] for entry in quiz_all_correct}
+    return sum(1 for entry in data if entry['Word'] not in asked_words)
 
 def quiz_all(file_path, english_mode=False, reset=False):
     if reset:
-        with open("QuizAllCorrect.csv", "w"):
-            pass
+        save_csv("QuizAllCorrect.csv", [])
 
-    quiz_all_correct = load_csv("QuizAllCorrect.csv")
-    data = load_csv(file_path)
-    asked_words = [entry['Word'] for entry in quiz_all_correct]
-    correct_count = 0  # initialize - this variable stores correct answers per loop
+    quiz_all_correct, data = load_csv("QuizAllCorrect.csv"), load_csv(file_path)
+    correct_count, total_bisaya_log = 0, len(data)
 
     try:
         while True:
             remaining_count = count_remaining_words(data, quiz_all_correct)
             print(f"Words remaining to be quizzed: {remaining_count}")
 
-            remaining_words = [entry for entry in data if entry['Word'] not in asked_words]
+            remaining_words = [entry for entry in data if entry['Word'] not in {row['Word'] for row in quiz_all_correct}]
 
             if not remaining_words:
                 print("You've been quizzed on all available words!")
                 break
 
             random_entry = random.choice(remaining_words)
-            word = random_entry['Word']
-            definition1 = random_entry['Definition1']
-            definition2 = random_entry['Definition2']
-            synonym = random_entry['Synonym']  # New: Check for synonym
+            word, definition1, definition2, synonym = random_entry['Word'], random_entry['Definition1'], random_entry['Definition2'], random_entry['Synonym']
 
             if english_mode:
-                if synonym:
-                    print(f"Definition: {definition1, definition2}")  # print column 1 in --english mode
-                    user_word = input("This is correct, but what is another word for this? (Ctrl+C to exit): ")
-                else:
-                    print(f"Definition: {definition1, definition2}")
-                    user_word = input("Enter the word (Ctrl+C to exit): ")
-            else:
-                print(f"Word: {word}")
-                user_definition = input("Enter the definition (Ctrl+C to exit): ")
+                if word in [entry['Word'] for entry in quiz_all_correct]:
+                    continue  # Skip if the user has already been prompted for this word
 
-            while True:
-                if (english_mode and ((synonym and user_word.lower() == synonym.lower()) or
-                                    (not synonym and user_word.lower() == word.lower()))) or \
-                        (not english_mode and (
-                                user_definition.lower() == definition1.lower() or user_definition.lower() == definition2.lower())):
-                    correct_count += 1
-                    print("Correct!")
-                    quiz_all_correct.append(random_entry)
-                    save_csv("QuizAllCorrect.csv", quiz_all_correct)
-                    asked_words.append(word)
-                    break
-                elif not english_mode and synonym:
-                    synonyms = [s.strip() for s in synonym.split(',')]
-                    if user_definition.lower() in [d.lower() for d in synonyms]:
-                        print("Correct, but I am looking for a different word.")
-                        user_definition = input("Try again (Ctrl+C to exit): ")
+                definitions = (definition1, definition2) if not synonym else (definition1, definition2, f"Synonym: {synonym}")
+                print(f"Definition: {', '.join(definitions)}")
+
+                while True:
+                    user_word = input("Enter the word (Ctrl+C to exit): ") if not synonym else input("Synonym: ")
+                    user_word_lower = user_word.strip().lower()
+
+                    correct_words = [word, synonym] if synonym else [word]
+
+                    if user_word_lower in [correct_word.strip().lower() for correct_word in correct_words]:
+                        correct_count += 1
+                        print("Correct!")
+                        quiz_all_correct.append(random_entry)
+                        save_csv("QuizAllCorrect.csv", quiz_all_correct)
+                        break
+                    else:
+                        print("Incorrect!")
+                        print(f"Correct word: {', '.join(correct_words)}")
+            else:
+                if word in [entry['Word'] for entry in quiz_all_correct]:
+                    continue  # Skip if the user has already been prompted for this word
+
+                print(f"Word: {word}")
+
+                while True:
+                    user_definition = input("Enter the definition (Ctrl+C to exit): ")
+
+                    if user_definition.strip().lower() == definition1.strip().lower() or user_definition.strip().lower() == definition2.strip().lower():
+                        correct_count += 1
+                        print("Correct!")
+                        quiz_all_correct.append(random_entry)
+                        save_csv("QuizAllCorrect.csv", quiz_all_correct)
+                        break
+                    elif synonym:
+                        synonyms = [s.strip() for s in synonym.split(',')]
+                        if user_definition.lower() in [d.lower() for d in synonyms]:
+                            print("Correct, but I am looking for a different word.")
+                            user_definition = input("Try again (Ctrl+C to exit): ")
+                        else:
+                            print("Incorrect!")
+                            print(f"Correct definitions: {definition1}, {definition2}")
+                            break
                     else:
                         print("Incorrect!")
                         print(f"Correct definitions: {definition1}, {definition2}")
                         break
-                else:
-                    print("Incorrect!")
-                    if english_mode:
-                        print(f"Correct definition: {word}")  # print column 1 in --english mode
-                    else:
-                        print(f"Correct definitions: {definition1}, {definition2}")
-                    break
 
     except KeyboardInterrupt:
         remaining_count = count_remaining_words(data, quiz_all_correct)
         print(f"Words remaining to be quizzed: {remaining_count}")
-        total_bisaya_log = len(data)
         total_quiz_correct = len(quiz_all_correct)
-        print(f"Total rows in BisayaLog.csv: {total_bisaya_log}")
         print(f"Total rows in QuizAllCorrect.csv: {total_quiz_correct}")
 
 def sift_csv(file_path):
-    data = load_csv(file_path)
-    modified_data = []
+    data, modified_data = load_csv(file_path), []
 
     try:
-        random.shuffle(data)  # Shuffle the data randomly
+        random.shuffle(data)
 
         for row in data:
-            modified_row = row.copy()
-            empty_fields = []
-
-            for key, value in row.items():
-                if value == "":
-                    empty_fields.append(key)
+            modified_row, empty_fields = row.copy(), [key for key, value in row.items() if value == ""]
 
             if empty_fields:
                 print(f"\nRow with Word '{row['Word']}':")
-                for key, value in row.items():
-                    print(f"{key}: {value}")
-
-                for key in empty_fields:
-                    modified_row[key] = input(f"{key} (enter to keep current value): ") or row[key]
-
+                print('\n'.join([f"{key}: {value}" for key, value in row.items()]))
+                modified_row.update({key: input(f"{key} (enter to keep current value): ") or row[key] for key in empty_fields})
                 modified_data.append(modified_row)
-
-                # Print count of remaining rows with empty cells using the modified data
-                remaining_rows_with_empty_cells = sum(1 for row in modified_data if any(cell == "" for cell in row.values()))
-                print(f"Rows remaining with empty cells: {remaining_rows_with_empty_cells}")
 
     except KeyboardInterrupt:
         print("\nSifting process interrupted. Saving the current progress.")
 
-    # Combine the existing data with the modified data
+    # Print this line after the for loop
+    remaining_rows_with_empty_cells = sum(1 for row in modified_data if any(cell == "" or cell.lower() == 'none' for cell in row.values()))
+    print(f"Rows remaining with empty cells or 'none': {remaining_rows_with_empty_cells}")
+
+
     for modified_row in modified_data:
         existing_row = next((row for row in data if row['Word'] == modified_row['Word']), None)
         if existing_row:
@@ -249,11 +206,7 @@ def main():
         add_row_interactive(default_file_path)
     elif args.search:
         search_result = search_word(default_file_path, args.search)
-        if search_result:
-            for row in search_result:
-                print(row)
-        else:
-            print("No matching rows found.")
+        print(search_result) if search_result else print("No matching rows found.")
     elif args.quiz:
         quiz(default_file_path, args.category, args.last, args.english)
     elif args.quizall:
