@@ -76,83 +76,116 @@ def count_remaining_words(data, quiz_all_correct):
     asked_words = {entry['Word'] for entry in quiz_all_correct}
     return sum(1 for entry in data if entry['Word'] not in asked_words)
 
-def quiz_all(file_path, english_mode=False, reset=False):
+def quiz_all(file_path, english_mode=False, reset=False, use_wrong_words=False):
+    # Load the QuizAllCorrect.csv file, which contains the list of correctly quizzed words
+    quiz_all_correct = load_csv("QuizAllCorrect.csv")
+    
+    # Reset WrongWords.csv if required
     if reset:
-        save_csv("QuizAllCorrect.csv", [])
-
-    quiz_all_correct, data = load_csv("QuizAllCorrect.csv"), load_csv(file_path)
-    correct_count, total_bisaya_log = 0, len(data)
-
+        open('WrongWords.csv', 'w').close()  # Clear the file content
+        print("WrongWords.csv has been reset.")
+    
+    # Load the data from the specified file path
+    if use_wrong_words:
+        # If the use_wrong_words flag is True, use the "WrongWords.csv" file for quizzing
+        file_path = os.path.expanduser('WrongWords.csv')
+        data = load_csv(file_path)
+        
+        # Check if WrongWords.csv is empty
+        if not data:
+            print("There are no words in WrongWords.csv. Please use '--quiz' or '--quizall' instead.")
+            return
+    else:
+        # Otherwise, use the provided file path (default is "BisayaLog.csv")
+        data = load_csv(file_path)
+    
+    # Initialize counters
+    correct_count = 0
+    total_quizzes = 0
+    incorrect_words = []  # To track incorrect words
+    
     try:
         while True:
-            remaining_count = count_remaining_words(data, quiz_all_correct)
-            print(f"Words remaining to be quizzed: {remaining_count}")
-
+            # Filter out words that have already been quizzed
             remaining_words = [entry for entry in data if entry['Word'] not in {row['Word'] for row in quiz_all_correct}]
-
+            
+            # Calculate the remaining words
+            remaining_words_count = len(remaining_words)
+            print(f"Remaining undefined words in BisayaLog.csv: {remaining_words_count}")
+            
+            # If there are no remaining words, check if we should repeat incorrect words
             if not remaining_words:
                 print("You've been quizzed on all available words!")
+                if use_wrong_words:
+                    print("Repeating incorrectly answered words from WrongWords.csv.")
                 break
-
+            
+            # Randomly select a word from remaining words
             random_entry = random.choice(remaining_words)
-            word, definition1, definition2, synonym = random_entry['Word'], random_entry['Definition1'], random_entry['Definition2'], random_entry['Synonym']
-
+            word, definition1, definition2 = random_entry['Word'], random_entry['Definition1'], random_entry['Definition2']
+            synonym = random_entry.get('Synonym', '')
+            
+            # For English mode: display definitions and prompt for the word
             if english_mode:
-                if word in [entry['Word'] for entry in quiz_all_correct]:
-                    continue  # Skip if the user has already been prompted for this word
+                print(f"Definition: {definition1}, {definition2}")
+                if synonym:
+                    print(f"Synonym: {synonym}")
+                user_input = input("Enter the word (Ctrl+C to exit): ")
 
-                definitions = (definition1, definition2) if not synonym else (definition1, definition2, f"Synonym: {synonym}")
-                print(f"Definition: {', '.join(definitions)}")
-
-                while True:
-                    user_word = input("Enter the word (Ctrl+C to exit): ") if not synonym else input("Synonym: ")
-                    user_word_lower = user_word.strip().lower()
-
-                    correct_words = [word, synonym] if synonym else [word]
-
-                    if user_word_lower in [correct_word.strip().lower() for correct_word in correct_words]:
-                        correct_count += 1
-                        print("Correct!")
-                        quiz_all_correct.append(random_entry)
-                        save_csv("QuizAllCorrect.csv", quiz_all_correct)
-                        break
-                    else:
-                        print("Incorrect!")
-                        print(f"Correct word: {', '.join(correct_words)}")
+                # Check if the user's input is correct
+                if user_input.strip().lower() == word.strip().lower() or (synonym and user_input.strip().lower() == synonym.strip().lower()):
+                    correct_count += 1
+                    print("Correct!")
+                    quiz_all_correct.append(random_entry)
+                    save_csv("QuizAllCorrect.csv", quiz_all_correct)
+                else:
+                    print("Incorrect!")
+                    print(f"Correct word: {word}")
+                    incorrect_words.append(random_entry)  # Add the incorrect word to the list
+            
+            # For non-English mode: display the word and prompt for the definition
             else:
-                if word in [entry['Word'] for entry in quiz_all_correct]:
-                    continue  # Skip if the user has already been prompted for this word
-
                 print(f"Word: {word}")
+                user_input = input("Enter the definition (Ctrl+C to exit): ")
 
-                while True:
-                    user_definition = input("Enter the definition (Ctrl+C to exit): ")
+                # Check if the user's input is correct
+                if user_input.strip().lower() == definition1.strip().lower() or user_input.strip().lower() == definition2.strip().lower():
+                    correct_count += 1
+                    print("Correct!")
+                    quiz_all_correct.append(random_entry)
+                    save_csv("QuizAllCorrect.csv", quiz_all_correct)
+                else:
+                    print("Incorrect!")
+                    print(f"Correct definitions: {definition1}, {definition2}")
+                    incorrect_words.append(random_entry)  # Add the incorrect word to the list
 
-                    if user_definition.strip().lower() == definition1.strip().lower() or user_definition.strip().lower() == definition2.strip().lower():
-                        correct_count += 1
-                        print("Correct!")
-                        quiz_all_correct.append(random_entry)
-                        save_csv("QuizAllCorrect.csv", quiz_all_correct)
-                        break
-                    elif synonym:
-                        synonyms = [s.strip() for s in synonym.split(',')]
-                        if user_definition.lower() in [d.lower() for d in synonyms]:
-                            print("Correct, but I am looking for a different word.")
-                            user_definition = input("Try again (Ctrl+C to exit): ")
-                        else:
-                            print("Incorrect!")
-                            print(f"Correct definitions: {definition1}, {definition2}")
-                            break
-                    else:
-                        print("Incorrect!")
-                        print(f"Correct definitions: {definition1}, {definition2}")
-                        break
-
+            total_quizzes += 1
+            
     except KeyboardInterrupt:
-        remaining_count = count_remaining_words(data, quiz_all_correct)
-        print(f"Words remaining to be quizzed: {remaining_count}")
-        total_quiz_correct = len(quiz_all_correct)
-        print(f"Total rows in QuizAllCorrect.csv: {total_quiz_correct}")
+        pass
+
+    # Save incorrect words to "WrongWords.csv"
+    # Ensure to save entire rows of incorrect words
+    if incorrect_words:
+        # Load existing incorrect words from "WrongWords.csv"
+        existing_incorrect_words = load_csv('WrongWords.csv')
+        # Combine new and existing incorrect words and remove duplicates
+        all_incorrect_words = existing_incorrect_words + incorrect_words
+        all_incorrect_words = [dict(t) for t in {tuple(d.items()) for d in all_incorrect_words}]
+        # Save all incorrect words to "WrongWords.csv"
+        save_csv('WrongWords.csv', all_incorrect_words)
+
+    # Calculate and print final results
+    print(f"Total words quizzed: {total_quizzes}")
+    print(f"Correctly defined: {correct_count}")
+
+    # Handle case where total_quizzes is zero
+    if total_quizzes > 0:
+        accuracy = (correct_count / total_quizzes) * 100
+        print(f"Accuracy: {accuracy:.2f}%")
+    else:
+        print("No quizzes taken.")
+
 
 def sift_csv(file_path):
     data, modified_data = load_csv(file_path), []
@@ -187,6 +220,13 @@ def sift_csv(file_path):
     save_csv(file_path, data)
     print("Sifting complete.")
 
+def save_wrong_words(file_path, words):
+    # Save the incorrect words to a CSV file
+    with open(file_path, 'a', newline='') as file:
+        writer = csv.writer(file)
+        for word in words:
+            writer.writerow([word])
+
 def main():
     default_file_path = os.path.expanduser('BisayaLog.csv')
 
@@ -200,6 +240,8 @@ def main():
     parser.add_argument('--quizall', help='Take a quiz with all words and store correctly defined words in QuizAllCorrect.csv', action='store_true')
     parser.add_argument('--quizall_reset', help='Reset QuizAllCorrect.csv', action='store_true')
     parser.add_argument('--sift', help='Sift through BisayaLog.csv and input missing values', action='store_true')
+    parser.add_argument('--wrong_words', help='Take a quiz with words the user got wrong previously and prompt for definitions', action='store_true')
+    parser.add_argument('--reset', help='Reset WrongWords.csv', action='store_true')
     args = parser.parse_args()
 
     if args.add:
@@ -210,7 +252,7 @@ def main():
     elif args.quiz:
         quiz(default_file_path, args.category, args.last, args.english)
     elif args.quizall:
-        quiz_all(default_file_path, args.english)
+        quiz_all(default_file_path, args.english, reset=args.reset, use_wrong_words=args.wrong_words)
     elif args.quizall_reset:
         quiz_all("BisayaLog.csv", reset=True)
     elif args.sift:
