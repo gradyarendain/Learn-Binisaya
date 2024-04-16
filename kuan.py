@@ -188,35 +188,44 @@ def quiz_all(file_path, english_mode=False, reset=False, use_wrong_words=False):
 
 
 def sift_csv(file_path):
-    data, modified_data = load_csv(file_path), []
+    # Load the data without shuffling
+    data = load_csv(file_path)
+    modified_data = []
+    remaining_words_with_empty_cells = 0
 
     try:
-        random.shuffle(data)
+        # Filter rows with missing information
+        rows_with_missing_info = [row for row in data if any(not value for value in row.values())]
 
-        for row in data:
-            modified_row, empty_fields = row.copy(), [key for key, value in row.items() if value == ""]
+        while rows_with_missing_info:
+            # Randomly select a row from the filtered list
+            random_row = random.choice(rows_with_missing_info)
 
-            if empty_fields:
-                print(f"\nRow with Word '{row['Word']}':")
-                print('\n'.join([f"{key}: {value}" for key, value in row.items()]))
-                modified_row.update({key: input(f"{key} (enter to keep current value): ") or row[key] for key in empty_fields})
-                modified_data.append(modified_row)
+            # Prompt the user for missing fields
+            empty_fields = [key for key, value in random_row.items() if not value]
+            print(f"\nRow with Word '{random_row['Word']}':")
+            print('\n'.join([f"{key}: {value}" for key, value in random_row.items()]))
+
+            # Update the row with user input for missing fields
+            modified_row = random_row.copy()
+            for key in empty_fields:
+                user_input = input(f"{key} (enter to keep current value): ")
+                if user_input.strip():
+                    modified_row[key] = user_input.strip()
+
+            # Replace the existing row in the data with the modified row
+            data[data.index(random_row)] = modified_row
+
+            # Remove the modified row from the list of rows with missing information
+            rows_with_missing_info = [row for row in rows_with_missing_info if row != random_row]
+            remaining_words_with_empty_cells = len(rows_with_missing_info)
+
+        print(f"Rows remaining with empty cells or 'none': {remaining_words_with_empty_cells}")
 
     except KeyboardInterrupt:
         print("\nSifting process interrupted. Saving the current progress.")
 
-    # Print this line after the for loop
-    remaining_rows_with_empty_cells = sum(1 for row in modified_data if any(cell == "" or cell.lower() == 'none' for cell in row.values()))
-    print(f"Rows remaining with empty cells or 'none': {remaining_rows_with_empty_cells}")
-
-
-    for modified_row in modified_data:
-        existing_row = next((row for row in data if row['Word'] == modified_row['Word']), None)
-        if existing_row:
-            existing_row.update(modified_row)
-        else:
-            data.append(modified_row)
-
+    # Save the data without shuffling
     save_csv(file_path, data)
     print("Sifting complete.")
 
