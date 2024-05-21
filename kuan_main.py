@@ -5,7 +5,7 @@ from quiz_management.quizzing import quiz, quiz_all
 from sift_csv.sift import sift_csv
 
 def main():
-    default_file_path = os.path.expanduser('/home/grady/Learn-Binisaya/data/BisayaLog.csv')
+    default_file_path = os.path.expanduser('data/BisayaLog.csv')
 
     parser = argparse.ArgumentParser(description='Process CSV file')
     parser.add_argument('--add', help='Add a new row to the CSV file', action='store_true')

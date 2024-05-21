@@ -2,9 +2,9 @@ import os
 import random
 import csv
 
-path_to_BisayaLog = "/home/grady/Learn-Binisaya/data/BisayaLog.csv"
-path_to_WrongWords = "/home/grady/Learn-Binisaya/data/WrongWords.csv"
-path_to_QuizAllCorrect = "/home/grady/Learn-Binisaya/data/QuizAllCorrect.csv"
+path_to_BisayaLog = "data/BisayaLog.csv"
+path_to_WrongWords = "data/WrongWords.csv"
+path_to_QuizAllCorrect = "data/QuizAllCorrect.csv"
 
 # Function to load CSV data
 def load_csv(file_path):

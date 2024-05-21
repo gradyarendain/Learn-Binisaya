@@ -3,9 +3,9 @@ import csv
 import random
 from bisaya_vocab.bisaya_vocab import load_csv, save_csv
 
-path_to_BisayaLog = "/home/grady/Learn-Binisaya/data/BisayaLog.csv"
-path_to_WrongWords = "/home/grady/Learn-Binisaya/data/WrongWords.csv"
-path_to_QuizAllCorrect = "/home/grady/Learn-Binisaya/data/QuizAllCorrect.csv"
+path_to_BisayaLog = "data/BisayaLog.csv"
+path_to_WrongWords = "data/WrongWords.csv"
+path_to_QuizAllCorrect = "data/QuizAllCorrect.csv"
 
 def quiz(file_path, category_filter=None, last=None, english_mode=False):
     data = load_csv(file_path)[-int(last):] if last else load_csv(file_path)
