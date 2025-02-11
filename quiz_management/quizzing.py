@@ -54,6 +54,20 @@ def quiz(file_path, category_filter=None, last=None, english_mode=False):
     print(f"Correctly defined: {correct_count}")
     print(f"Accuracy: {correct_count / total_quizzes * 100:.2f}%" if total_quizzes > 0 else "No quizzes taken.")
 
+def handle_incorrect_answer(correct_word):
+    """Practice session for incorrect answers"""
+    print("\nLet's practice this word!")
+    
+    # Practice writing the word 3 times
+    print(f"\nPlease write '{correct_word}' three times:")
+    for i in range(3):
+        input(f"{i+1}. ")
+    
+    # Practice using the word in a sentence
+    print("\nNow, use this word in a sentence:")
+    input("Your sentence: ")
+    print("\nGreat practice! Let's continue with the quiz.\n")
+
 def quiz_all(file_path, english_mode=False, reset=False, use_wrong_words=False):
     # Load the QuizAllCorrect.csv file, which contains the list of correctly quizzed words
     quiz_all_correct = load_csv(path_to_QuizAllCorrect)
@@ -121,6 +135,7 @@ def quiz_all(file_path, english_mode=False, reset=False, use_wrong_words=False):
                     print("Incorrect!")
                     print(f"Correct word: {word}")
                     incorrect_words.append(random_entry)  # Add the incorrect word to the list
+                    handle_incorrect_answer(word)
             
             # For non-English mode: display the word and prompt for the definition
             else:
@@ -137,6 +152,7 @@ def quiz_all(file_path, english_mode=False, reset=False, use_wrong_words=False):
                     print("Incorrect!")
                     print(f"Correct definitions: {definition1}, {definition2}")
                     incorrect_words.append(random_entry)  # Add the incorrect word to the list
+                    handle_incorrect_answer(word)
 
             total_quizzes += 1
             
